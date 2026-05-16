@@ -53,7 +53,7 @@ func main() {
 
 	// 4. Run database migrations
 	if cfg.AppEnv == "development" {
-		if err := db.AutoMigrate(&repository.UserModel{}, &repository.RefreshTokenModel{}, &repository.ReferralModel{}, &repository.UserReferralCodeModel{}); err != nil {
+		if err := db.AutoMigrate(&repository.UserModel{}, &repository.RefreshTokenModel{}, &repository.PasswordResetModel{}, &repository.ReferralModel{}, &repository.UserReferralCodeModel{}); err != nil {
 			zapLogger.Fatal("failed to auto-migrate", zap.Error(err))
 		}
 		zapLogger.Info("database migration completed (dev auto-migrate)")
