@@ -127,6 +127,11 @@ func main() {
 	resetPasswordHandler := handler.NewResetPasswordHandler(authService, zapLogger)
 	resetPasswordHandler.RegisterRoutes(apiV1)
 
+	runnerApplicationRepo := repository.NewGormRunnerApplicationRepository(db)
+	runnerApplicationService := application.NewRunnerApplicationService(runnerApplicationRepo, zapLogger)
+	runnerApplyHandler := handler.NewRunnerApplyHandler(runnerApplicationService, zapLogger)
+	runnerApplyHandler.RegisterRoutes(apiV1)
+
 	// Register admin handler routes
 	adminHandler := handler.NewAdminHandler(authService)
 	adminHandler.RegisterRoutes(&router.RouterGroup, jwtManager)

@@ -32,3 +32,15 @@ type PasswordResetRepository interface {
 	MarkUsed(ctx context.Context, id uuid.UUID) error
 	MarkUsedAndUpdatePassword(ctx context.Context, tokenID uuid.UUID, userID uuid.UUID, newHash string) error
 }
+
+// RunnerApplicationRepository defines persistence operations for RunnerApplication entities.
+type RunnerApplicationRepository interface {
+	// Insert persists a new runner application and returns a formatted display ID
+	// of the form KR-YYYY-NNNNN (e.g. KR-2026-00001).
+	// The display ID is computed from the annual row count inside the same transaction
+	// as the insert; a small race condition is possible under very high concurrency but
+	// is acceptable for this use case.
+	// Returns domain.NewAlreadyExistsError("RunnerApplication", "ic_number", icNumber)
+	// if a row with the same ic_number already exists.
+	Insert(ctx context.Context, app *RunnerApplication) (string, error)
+}
