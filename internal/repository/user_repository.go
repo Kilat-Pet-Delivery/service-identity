@@ -148,7 +148,7 @@ func (r *GormUserRepository) UpdatePasswordHash(ctx context.Context, userID uuid
 		Where("id = ?", userID).
 		Updates(map[string]interface{}{
 			"password_hash": passwordHash,
-			"updated_at":    time.Now(),
+			"updated_at":    time.Now().UTC(),
 		})
 	if result.Error != nil {
 		return result.Error

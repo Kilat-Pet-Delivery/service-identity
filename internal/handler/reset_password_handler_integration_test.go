@@ -81,7 +81,14 @@ func TestResetPassword_ValidToken_Returns200_UpdatesHash(t *testing.T) {
 	db := setupIntegrationDB(t)
 
 	userID, _ := seedIntegrationUser(t, db)
+	t.Cleanup(func() {
+		db.Where("id = ?", userID).Delete(&repository.UserModel{})
+	})
+
 	token := seedIntegrationToken(t, db, userID)
+	t.Cleanup(func() {
+		db.Where("user_id = ?", userID).Delete(&repository.PasswordResetModel{})
+	})
 
 	userRepo := repository.NewGormUserRepository(db)
 	tokenRepo := repository.NewGormTokenRepository(db)

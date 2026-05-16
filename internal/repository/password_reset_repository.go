@@ -118,18 +118,27 @@ func (r *GormPasswordResetRepository) MarkUsed(ctx context.Context, id uuid.UUID
 // Both updates are wrapped in a single Postgres transaction; a failure in either rolls back both.
 func (r *GormPasswordResetRepository) MarkUsedAndUpdatePassword(ctx context.Context, tokenID uuid.UUID, userID uuid.UUID, newHash string) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&PasswordResetModel{}).
+		result := tx.Model(&PasswordResetModel{}).
 			Where("id = ?", tokenID).
-			Update("used_at", time.Now().UTC()).Error; err != nil {
-			return err
+			Update("used_at", time.Now().UTC())
+		if result.Error != nil {
+			return result.Error
 		}
-		if err := tx.Model(&UserModel{}).
+		if result.RowsAffected == 0 {
+			return domain.ErrNotFound
+		}
+
+		result = tx.Model(&UserModel{}).
 			Where("id = ?", userID).
 			Updates(map[string]interface{}{
 				"password_hash": newHash,
 				"updated_at":    time.Now().UTC(),
-			}).Error; err != nil {
-			return err
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return domain.ErrNotFound
 		}
 		return nil
 	})
