@@ -141,6 +141,24 @@ func (r *GormUserRepository) ListAll(ctx context.Context, page, limit int) ([]*i
 	return users, total, nil
 }
 
+// UpdatePasswordHash directly updates a user's password hash by ID.
+func (r *GormUserRepository) UpdatePasswordHash(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	result := r.db.WithContext(ctx).
+		Model(&UserModel{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"password_hash": passwordHash,
+			"updated_at":    time.Now(),
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 // CountByRole returns user counts grouped by role.
 func (r *GormUserRepository) CountByRole(ctx context.Context) (map[string]int64, error) {
 	type roleCount struct {

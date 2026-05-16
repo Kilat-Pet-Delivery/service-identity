@@ -342,6 +342,40 @@ func (s *AuthService) GetUserStats(ctx context.Context) (*UserStatsDTO, error) {
 	}, nil
 }
 
+// ResetPassword validates a reset token and updates the user's password hash atomically.
+func (s *AuthService) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) error {
+	if len(req.NewPassword) < 8 {
+		return domain.NewValidationError("password must be at least 8 characters")
+	}
+
+	reset, err := s.passwordResetRepo.FindAnyByToken(ctx, req.Token)
+	if err != nil {
+		return domain.NewValidationError("invalid token")
+	}
+
+	if reset.IsUsed() {
+		return domain.NewValidationError("token already used")
+	}
+
+	if reset.IsExpired() {
+		return domain.NewValidationError("token expired")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		s.logger.Error("failed to hash password during reset", zap.Error(err))
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	if err := s.passwordResetRepo.MarkUsedAndUpdatePassword(ctx, reset.ID(), reset.UserID(), string(hashedPassword)); err != nil {
+		s.logger.Error("failed to complete password reset transaction", zap.Error(err))
+		return fmt.Errorf("failed to reset password: %w", err)
+	}
+
+	s.logger.Info("password reset completed", zap.String("user_id", reset.UserID().String()))
+	return nil
+}
+
 // ForgotPassword initiates a password reset for the given email.
 // Always returns nil so the handler can respond 202 regardless of whether the email exists.
 func (s *AuthService) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) error {

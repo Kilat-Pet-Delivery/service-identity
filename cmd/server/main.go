@@ -124,6 +124,9 @@ func main() {
 	forgotPasswordHandler := handler.NewForgotPasswordHandler(authService, zapLogger)
 	forgotPasswordHandler.RegisterRoutes(apiV1)
 
+	resetPasswordHandler := handler.NewResetPasswordHandler(authService, zapLogger)
+	resetPasswordHandler.RegisterRoutes(apiV1)
+
 	// Register admin handler routes
 	adminHandler := handler.NewAdminHandler(authService)
 	adminHandler.RegisterRoutes(&router.RouterGroup, jwtManager)

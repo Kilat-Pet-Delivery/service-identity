@@ -81,3 +81,56 @@ func (r *GormPasswordResetRepository) FindByToken(ctx context.Context, token str
 	}
 	return model.toDomain(), nil
 }
+
+// FindAnyByToken retrieves a password reset token by its token string without filtering by expiry.
+// Returns domain.ErrNotFound if the token does not exist at all.
+func (r *GormPasswordResetRepository) FindAnyByToken(ctx context.Context, token string) (*identity.PasswordReset, error) {
+	var model PasswordResetModel
+	err := r.db.WithContext(ctx).
+		Where("token = ?", token).
+		First(&model).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return model.toDomain(), nil
+}
+
+// MarkUsed sets the used_at timestamp on a password reset token.
+// Returns domain.ErrNotFound if no rows were affected.
+func (r *GormPasswordResetRepository) MarkUsed(ctx context.Context, id uuid.UUID) error {
+	result := r.db.WithContext(ctx).
+		Model(&PasswordResetModel{}).
+		Where("id = ?", id).
+		Update("used_at", time.Now().UTC())
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+// MarkUsedAndUpdatePassword atomically marks a reset token as used and updates the user's password hash.
+// Both updates are wrapped in a single Postgres transaction; a failure in either rolls back both.
+func (r *GormPasswordResetRepository) MarkUsedAndUpdatePassword(ctx context.Context, tokenID uuid.UUID, userID uuid.UUID, newHash string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&PasswordResetModel{}).
+			Where("id = ?", tokenID).
+			Update("used_at", time.Now().UTC()).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&UserModel{}).
+			Where("id = ?", userID).
+			Updates(map[string]interface{}{
+				"password_hash": newHash,
+				"updated_at":    time.Now().UTC(),
+			}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}

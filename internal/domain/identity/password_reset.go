@@ -82,3 +82,9 @@ func (p *PasswordReset) IsUsed() bool {
 func (p *PasswordReset) IsValid() bool {
 	return !p.IsUsed() && !p.IsExpired()
 }
+
+// MarkUsed sets the usedAt timestamp to the current UTC time.
+func (p *PasswordReset) MarkUsed() {
+	now := time.Now().UTC()
+	p.usedAt = &now
+}
