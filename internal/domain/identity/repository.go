@@ -22,3 +22,9 @@ type TokenRepository interface {
 	FindByToken(ctx context.Context, token string) (*RefreshToken, error)
 	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
 }
+
+// PasswordResetRepository defines persistence operations for PasswordReset entities.
+type PasswordResetRepository interface {
+	Create(ctx context.Context, reset *PasswordReset) error
+	FindByToken(ctx context.Context, token string) (*PasswordReset, error)
+}

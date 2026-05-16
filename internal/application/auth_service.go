@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -45,24 +47,30 @@ type UpdateProfileRequest struct {
 
 // AuthService implements authentication and user management use cases.
 type AuthService struct {
-	userRepo  identity.UserRepository
-	tokenRepo identity.TokenRepository
-	jwt       *auth.JWTManager
-	logger    *zap.Logger
+	userRepo          identity.UserRepository
+	tokenRepo         identity.TokenRepository
+	passwordResetRepo identity.PasswordResetRepository
+	notifier          PasswordResetNotifier
+	jwt               *auth.JWTManager
+	logger            *zap.Logger
 }
 
 // NewAuthService creates a new AuthService.
 func NewAuthService(
 	userRepo identity.UserRepository,
 	tokenRepo identity.TokenRepository,
+	passwordResetRepo identity.PasswordResetRepository,
+	notifier PasswordResetNotifier,
 	jwt *auth.JWTManager,
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		jwt:       jwt,
-		logger:    logger,
+		userRepo:          userRepo,
+		tokenRepo:         tokenRepo,
+		passwordResetRepo: passwordResetRepo,
+		notifier:          notifier,
+		jwt:               jwt,
+		logger:            logger,
 	}
 }
 
@@ -332,6 +340,38 @@ func (s *AuthService) GetUserStats(ctx context.Context) (*UserStatsDTO, error) {
 		TotalUsers: total,
 		ByRole:     counts,
 	}, nil
+}
+
+// ForgotPassword initiates a password reset for the given email.
+// Always returns nil so the handler can respond 202 regardless of whether the email exists.
+func (s *AuthService) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) error {
+	if req.Email == "" {
+		return nil
+	}
+
+	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return nil
+	}
+
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		s.logger.Error("failed to generate reset token", zap.Error(err))
+		return fmt.Errorf("failed to generate reset token: %w", err)
+	}
+	tokenStr := hex.EncodeToString(tokenBytes)
+
+	reset := identity.NewPasswordReset(user.ID(), tokenStr, time.Now().UTC().Add(time.Hour))
+	if err := s.passwordResetRepo.Create(ctx, reset); err != nil {
+		s.logger.Error("failed to persist password reset token", zap.Error(err))
+		return fmt.Errorf("failed to persist password reset token: %w", err)
+	}
+
+	if err := s.notifier.SendPasswordResetEmail(ctx, user.Email(), tokenStr); err != nil {
+		s.logger.Warn("failed to enqueue password reset email", zap.Error(err), zap.String("email", user.Email()))
+	}
+
+	return nil
 }
 
 // toUserDTO converts a domain User to a UserDTO.

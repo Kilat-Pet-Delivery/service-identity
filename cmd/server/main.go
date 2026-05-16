@@ -88,9 +88,11 @@ func main() {
 	// 6. Create repositories
 	userRepo := repository.NewGormUserRepository(db)
 	tokenRepo := repository.NewGormTokenRepository(db)
+	passwordResetRepo := repository.NewGormPasswordResetRepository(db)
 
 	// 7. Create auth service
-	authService := application.NewAuthService(userRepo, tokenRepo, jwtManager, zapLogger)
+	notifier := application.NewLogOnlyPasswordResetNotifier(zapLogger)
+	authService := application.NewAuthService(userRepo, tokenRepo, passwordResetRepo, notifier, jwtManager, zapLogger)
 
 	// 8. Create Gin router with global middleware
 	gin.SetMode(gin.ReleaseMode)
@@ -118,6 +120,9 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService, zapLogger)
 	authHandler.RegisterRoutes(apiV1, jwtManager)
 	referralHandler.RegisterRoutes(&router.RouterGroup, jwtManager)
+
+	forgotPasswordHandler := handler.NewForgotPasswordHandler(authService, zapLogger)
+	forgotPasswordHandler.RegisterRoutes(apiV1)
 
 	// Register admin handler routes
 	adminHandler := handler.NewAdminHandler(authService)
