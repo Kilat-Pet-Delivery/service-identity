@@ -53,6 +53,10 @@ func main() {
 
 	// 4. Run database migrations
 	if cfg.AppEnv == "development" {
+		// RunnerApplicationModel is intentionally omitted: GORM's migrator drops its
+		// conventional unique-constraint name (uni_runner_applications_ic_number)
+		// which doesn't match the SQL migration's name (runner_applications_ic_number_key).
+		// SQL migrations own this table.
 		if err := db.AutoMigrate(&repository.UserModel{}, &repository.RefreshTokenModel{}, &repository.PasswordResetModel{}, &repository.ReferralModel{}, &repository.UserReferralCodeModel{}); err != nil {
 			zapLogger.Fatal("failed to auto-migrate", zap.Error(err))
 		}

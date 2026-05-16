@@ -49,7 +49,6 @@ func (s *RunnerApplicationService) Apply(ctx context.Context, req dto.RunnerAppl
 
 	s.logger.Info("runner application submitted",
 		zap.String("display_id", displayID),
-		zap.String("ic_number", req.ICNumber),
 	)
 	return displayID, nil
 }

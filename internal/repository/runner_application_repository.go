@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -52,25 +53,6 @@ func fromDomainRunnerApplication(a *identity.RunnerApplication) *RunnerApplicati
 		ReviewedAt:              a.ReviewedAt(),
 		ReviewerUserID:          a.ReviewerUserID(),
 	}
-}
-
-// toDomain converts a RunnerApplicationModel to a domain RunnerApplication.
-func (m *RunnerApplicationModel) toDomain() *identity.RunnerApplication {
-	return identity.ReconstructRunnerApplication(
-		m.ID,
-		m.Name,
-		m.Phone,
-		m.ICNumber,
-		m.VehicleType,
-		m.PlateNumber,
-		[]string(m.PetExperience),
-		m.ComfortableWithLivePets,
-		m.ConsentAcknowledged,
-		m.Status,
-		m.SubmittedAt,
-		m.ReviewedAt,
-		m.ReviewerUserID,
-	)
 }
 
 // GormRunnerApplicationRepository is a GORM-based implementation of RunnerApplicationRepository.
@@ -134,9 +116,5 @@ func isICNumberDuplicateError(err error) bool {
 
 // isPqError attempts to unwrap a pq.Error from err. Returns true if successful.
 func isPqError(err error, target **pq.Error) bool {
-	if pqErr, ok := err.(*pq.Error); ok {
-		*target = pqErr
-		return true
-	}
-	return false
+	return errors.As(err, target)
 }

@@ -47,34 +47,6 @@ func NewRunnerApplication(
 	}
 }
 
-// ReconstructRunnerApplication rebuilds a RunnerApplication from persistence data.
-func ReconstructRunnerApplication(
-	id uuid.UUID,
-	name, phone, icNumber, vehicleType, plateNumber string,
-	petExperience []string,
-	comfortableWithLivePets, consentAcknowledged bool,
-	status string,
-	submittedAt time.Time,
-	reviewedAt *time.Time,
-	reviewerUserID *uuid.UUID,
-) *RunnerApplication {
-	return &RunnerApplication{
-		id:                     id,
-		name:                   name,
-		phone:                  phone,
-		icNumber:               icNumber,
-		vehicleType:            vehicleType,
-		plateNumber:            plateNumber,
-		petExperience:          petExperience,
-		comfortableWithLivePets: comfortableWithLivePets,
-		consentAcknowledged:    consentAcknowledged,
-		status:                 status,
-		submittedAt:            submittedAt,
-		reviewedAt:             reviewedAt,
-		reviewerUserID:         reviewerUserID,
-	}
-}
-
 // --- Getters ---
 
 // ID returns the application's unique UUID.
